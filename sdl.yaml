@@ -1,0 +1,569 @@
+# Example configuration entry
+esphome:
+  name: sdl
+  on_boot:
+    - then:
+      - script.execute: update_ui_visibility
+
+api:
+
+host:
+
+display:
+  - platform: sdl
+    id: inkplate_display
+    dimensions:
+      width: 1024
+      height: 758
+
+lvgl:
+  displays:
+    - inkplate_display
+  buffer_size: 25%
+  default_font: montserrat_18
+  pages:
+    - id: status_unknown_page
+      widgets:
+        - label:
+            id: status_unknown_label
+            text_align: CENTER
+            text_font: montserrat_43
+            text: "CONNECTING..."
+            width: 1011
+            height: 758
+            pad_top: 358
+
+    - id: disarmed_page
+      widgets:
+        - button:
+            id: arm_away_btn
+            x: 51
+            y: 253
+            width: 441
+            height: 253
+            on_press:
+              then:
+                - script.execute: arm_away_script
+            widgets:
+              - label:
+                  id: arm_away_label
+                  x: 0
+                  y: 0
+                  width: 441
+                  height: 253
+                  align: CENTER
+                  text_font: font_button_large
+                  text: "ARM AWAY"
+                  text_align: CENTER
+                  pad_top: 86
+
+        - button:
+            id: arm_home_btn
+            x: 518
+            y: 253
+            width: 441
+            height: 253
+            on_press:
+              then:
+                - script.execute: arm_home_script
+            widgets:
+              - label:
+                  id: arm_home_label
+                  x: 0
+                  y: 0
+                  width: 441
+                  height: 253
+                  align: CENTER
+                  text_font: font_button_large
+                  text: "ARM STAY"
+                  text_align: CENTER
+                  pad_top: 86
+
+    - id: armed_page
+      widgets:
+        - label:
+            id: status_left_label
+            x: 25
+            y: 101
+            width: 278
+            height: 152
+            text_align: CENTER
+            text_font: montserrat_43
+            text: !lambda |-
+              std::string s = id(alarmo_state);
+              if (s == "arming") {
+                char buf[64];
+                sprintf(buf, "ARMING (%ds)", id(local_countdown));
+                return std::string(buf);
+              }
+              if (s == "armed_home")
+                return std::string("ARMED HOME");
+              if (s == "armed_away")
+                return std::string("ARMED AWAY");
+              if (s == "armed_night")
+                return std::string("ARMED NIGHT");
+              return std::string("OOPS");
+
+        - label:
+            id: pin_label
+            x: 328
+            y: 88
+            width: 657
+            height: 71
+            text_align: CENTER
+            text_font: montserrat_35
+            text: !lambda |-
+              if (id(invalid_flag)) return std::string("INVALID");
+              std::string s = "";
+              for (int i = 0; i < id(entered_pin).length(); i++) s += "●";
+              if (s.size() == 0) s = "";
+              return s;
+
+        - button:
+            id: btn_1
+            x: 341
+            y: 177
+            width: 152
+            height: 152
+            on_press:
+              then:
+                - lambda: |-
+                    if (id(entered_pin).length() < 6) id(entered_pin) += "1";
+                - lvgl.widget.redraw: pin_label
+            widgets:
+              - label:
+                  id: btn_1_label
+                  x: 0
+                  y: 0
+                  width: 152
+                  height: 152
+                  align: CENTER
+                  text: '1'
+                  text_font: montserrat_43
+                  text_align: CENTER
+                  pad_top: 53
+
+        - button:
+            id: btn_2
+            x: 505
+            y: 177
+            width: 152
+            height: 152
+            on_press:
+              then:
+                - lambda: |-
+                    if (id(entered_pin).length() < 6) id(entered_pin) += "2";
+                - lvgl.widget.redraw: pin_label
+            widgets:
+              - label:
+                  id: btn_2_label
+                  x: 0
+                  y: 0
+                  width: 152
+                  height: 152
+                  align: CENTER
+                  text: '2'
+                  text_font: montserrat_43
+                  text_align: CENTER
+                  pad_top: 53
+
+        - button:
+            id: btn_3
+            x: 669
+            y: 177
+            width: 152
+            height: 152
+            on_press:
+              then:
+                - lambda: |-
+                    if (id(entered_pin).length() < 6) id(entered_pin) += "3";
+                - lvgl.widget.redraw: pin_label
+            widgets:
+              - label:
+                  id: btn_3_label
+                  x: 0
+                  y: 0
+                  width: 152
+                  height: 152
+                  align: CENTER
+                  text: '3'
+                  text_font: montserrat_43
+                  text_align: CENTER
+                  pad_top: 53
+
+        - button:
+            id: btn_backspace
+            x: 835
+            y: 177
+            width: 152
+            height: 152
+            on_press:
+              then:
+                - lambda: |-
+                    if (id(entered_pin).length() > 0) id(entered_pin).pop_back();
+                - lvgl.widget.redraw: pin_label
+            widgets:
+              - label:
+                  id: btn_backspace_label
+                  x: 0
+                  y: 0
+                  width: 152
+                  height: 152
+                  align: CENTER
+                  text: 'DEL'
+                  text_font: montserrat_43
+                  text_align: CENTER
+                  pad_top: 53
+
+        - button:
+            id: btn_4
+            x: 341
+            y: 341
+            width: 152
+            height: 152
+            on_press:
+              then:
+                - lambda: |-
+                    if (id(entered_pin).length() < 6) id(entered_pin) += "4";
+                - lvgl.widget.redraw: pin_label
+            widgets:
+              - label:
+                  id: btn_4_label
+                  x: 0
+                  y: 0
+                  width: 152
+                  height: 152
+                  align: CENTER
+                  text: '4'
+                  text_font: montserrat_43
+                  text_align: CENTER
+                  pad_top: 53
+
+        - button:
+            id: btn_5
+            x: 505
+            y: 341
+            width: 152
+            height: 152
+            on_press:
+              then:
+                - lambda: |-
+                    if (id(entered_pin).length() < 6) id(entered_pin) += "5";
+                - lvgl.widget.redraw: pin_label
+            widgets:
+              - label:
+                  id: btn_5_label
+                  x: 0
+                  y: 0
+                  width: 152
+                  height: 152
+                  align: CENTER
+                  text: '5'
+                  text_font: montserrat_43
+                  text_align: CENTER
+                  pad_top: 53
+
+        - button:
+            id: btn_6
+            x: 669
+            y: 341
+            width: 152
+            height: 152
+            on_press:
+              then:
+                - lambda: |-
+                    if (id(entered_pin).length() < 6) id(entered_pin) += "6";
+                - lvgl.widget.redraw: pin_label
+            widgets:
+              - label:
+                  id: btn_6_label
+                  x: 0
+                  y: 0
+                  width: 152
+                  height: 152
+                  align: CENTER
+                  text: '6'
+                  text_font: montserrat_43
+                  text_align: CENTER
+                  pad_top: 53
+
+        - button:
+            id: btn_0
+            x: 835
+            y: 341
+            width: 152
+            height: 152
+            on_press:
+              then:
+                - lambda: |-
+                    if (id(entered_pin).length() < 6) id(entered_pin) += "0";
+                - lvgl.widget.redraw: pin_label
+            widgets:
+              - label:
+                  id: btn_0_label
+                  x: 0
+                  y: 0
+                  width: 152
+                  height: 152
+                  align: CENTER
+                  text: '0'
+                  text_font: montserrat_43
+                  text_align: CENTER
+                  pad_top: 53
+
+        - button:
+            id: btn_7
+            x: 341
+            y: 505
+            width: 152
+            height: 152
+            on_press:
+              then:
+                - lambda: |-
+                    if (id(entered_pin).length() < 6) id(entered_pin) += "7";
+                - lvgl.widget.redraw: pin_label
+            widgets:
+              - label:
+                  id: btn_7_label
+                  x: 0
+                  y: 0
+                  width: 152
+                  height: 152
+                  align: CENTER
+                  text: '7'
+                  text_font: montserrat_43
+                  text_align: CENTER
+                  pad_top: 53
+
+        - button:
+            id: btn_8
+            x: 505
+            y: 505
+            width: 152
+            height: 152
+            on_press:
+              then:
+                - lambda: |-
+                    if (id(entered_pin).length() < 6) id(entered_pin) += "8";
+                - lvgl.widget.redraw: pin_label
+            widgets:
+              - label:
+                  id: btn_8_label
+                  x: 0
+                  y: 0
+                  width: 152
+                  height: 152
+                  align: CENTER
+                  text: '8'
+                  text_font: montserrat_43
+                  text_align: CENTER
+                  pad_top: 53
+
+        - button:
+            id: btn_9
+            x: 669
+            y: 505
+            width: 152
+            height: 152
+            on_press:
+              then:
+                - lambda: |-
+                    if (id(entered_pin).length() < 6) id(entered_pin) += "9";
+                - lvgl.widget.redraw: pin_label
+            widgets:
+              - label:
+                  id: btn_9_label
+                  x: 0
+                  y: 0
+                  width: 152
+                  height: 152
+                  align: CENTER
+                  text: '9'
+                  text_font: montserrat_43
+                  text_align: CENTER
+                  pad_top: 53
+
+        - button:
+            id: btn_submit
+            x: 835
+            y: 505
+            width: 152
+            height: 152
+            on_press:
+              then:
+                - script.execute: submit_pin_script
+            widgets:
+              - label:
+                  id: btn_submit_label
+                  x: 0
+                  y: 0
+                  width: 152
+                  height: 152
+                  align: CENTER
+                  text: 'OK'
+                  text_font: montserrat_34
+                  text_align: CENTER
+                  pad_top: 53
+
+font:
+  - file: "gfonts://Montserrat"
+    id: montserrat_18
+    size: 18
+  - file: "gfonts://Montserrat"
+    id: montserrat_35
+    size: 35
+  - file: "gfonts://Montserrat"
+    id: montserrat_43
+    size: 43
+  - file: "gfonts://Roboto"
+    id: font_medium
+    size: 30
+  - file: "gfonts://Roboto"
+    id: font_large
+    size: 45
+  - file: "gfonts://Roboto@700"
+    id: font_title
+    size: 45
+  - file: "gfonts://Roboto@700"
+    id: font_status
+    size: 35
+  - file: "gfonts://Roboto@700"
+    id: font_button
+    size: 33
+  - file: "gfonts://Roboto@700"
+    id: font_button_large
+    size: 81
+
+# Minimal placeholders for SDL testing
+globals:
+  - id: entered_pin
+    type: std::string
+    restore_value: no
+    initial_value: '""'
+
+  - id: invalid_flag
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+  - id: local_countdown
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  - id: show_error
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+  - id: show_connection_error
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+  - id: light_timeout
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  - id: alarmo_state
+    type: std::string
+    restore_value: no
+    initial_value: '"disarmed"'
+
+text_sensor:
+  - platform: homeassistant
+    id: alarmo_entity
+    entity_id: alarm_control_panel.alarmo
+    on_value:
+      then:
+        - lambda: |-
+            // Mirror HA alarm state into a local global so it can be overridden for testing
+            id(alarmo_state) = std::string(x);
+        - script.execute: update_ui_visibility
+
+sensor:
+  - platform: homeassistant
+    id: alarmo_delay
+    entity_id: alarm_control_panel.alarmo
+    attribute: delay
+    unit_of_measurement: 's'
+
+interval:
+  - interval: 1s
+    then:
+      - lambda: |-
+          // Sync local_countdown from the Alarmo delay attribute (if available)
+          {
+            float v = id(alarmo_delay).state;
+            if (v == v) {
+              id(local_countdown) = (int)(v + 0.5);
+            } else {
+              id(local_countdown) = 0;
+            }
+          }
+      - lvgl.widget.redraw: status_left_label
+      - lvgl.widget.redraw: pin_label
+
+script:
+  - id: update_ui_visibility
+    then:
+      - if:
+          condition:
+            lambda: 'return (id(alarmo_state) == "unknown") || (id(alarmo_state) == "unavailable");'
+          then:
+            - lvgl.page.show: status_unknown_page
+            - lvgl.widget.redraw: status_unknown_label
+          else:
+            - if:
+                condition:
+                  lambda: 'return id(alarmo_state) == "disarmed";'
+                then:
+                  - lvgl.page.show: disarmed_page
+                  - lvgl.widget.redraw: arm_away_label
+                  - lvgl.widget.redraw: arm_home_label
+                else:
+                  - lvgl.page.show: armed_page
+                  - lvgl.widget.redraw: status_left_label
+                  - lvgl.widget.redraw: pin_label
+  - id: arm_away_script
+    then:
+      - homeassistant.service:
+          service: alarmo.arm
+          data:
+            mode: away
+            entity_id: alarm_control_panel.alarmo
+
+  - id: arm_home_script
+    then:
+      - homeassistant.service:
+          service: alarmo.arm
+          data:
+            mode: home
+            entity_id: alarm_control_panel.alarmo
+
+  - id: submit_pin_script
+    then:
+      - homeassistant.service:
+          service: alarmo.disarm
+          data:
+            entity_id: alarm_control_panel.alarmo
+            code: !lambda 'return id(entered_pin);'
+      - delay: 1s
+      - lambda: |-
+          // If Alarmo didn't switch to 'disarmed' shortly after the service call,
+          // show INVALID for 2s and clear entered PIN.
+          if (id(alarmo_state) != "disarmed") {
+            id(invalid_flag) = true;
+          } else {
+            id(entered_pin) = "";
+          }
+      - if:
+          condition:
+            lambda: 'return id(invalid_flag);'
+          then:
+            - lvgl.widget.redraw: pin_label
+            - delay: 2s
+            - lambda: |-
+                id(invalid_flag) = false;
+                id(entered_pin) = "";

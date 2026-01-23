@@ -1,0 +1,742 @@
+esphome:
+  name: inkplate-alarm-panel
+  on_boot:
+    then:
+      - delay: 5s
+      - script.execute: update_ui_visibility
+
+esp32:
+  board: esp-wrover-kit
+  framework:
+    type: arduino
+  variant: esp32
+  cpu_frequency: 240MHz
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "0tN1NmkXjS+0UHmOd8sd7k5T7EbagXmPHxFXmAZo+zg="
+
+ota:
+  platform: esphome
+  password: "inkplate_ota_pass_2024"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  
+  ap:
+    ssid: "Inkplate-Alarm Fallback"
+
+captive_portal:
+
+# PSRAM configuration required for Inkplate display
+psram:
+  mode: quad
+  speed: 80MHz
+
+# I2C configuration for PCA6416A GPIO expander
+i2c:
+  - id: i2c_bus
+    sda: GPIO21
+    scl: GPIO22
+    scan: true
+
+# Inkplate 6 Plus configuration - Uses PCA6416A not MCP23017
+pca6416a:
+  - id: pca6416a_hub
+    address: 0x20
+
+# Frontlight control
+output:
+  - platform: gpio
+    pin:
+      pca6416a: pca6416a_hub
+      number: 11
+    id: frontlight_output
+
+light:
+  - platform: binary
+    output: frontlight_output
+    name: "Inkplate Frontlight"
+    id: inkplate_light
+    restore_mode: RESTORE_DEFAULT_ON
+
+display:
+  - platform: inkplate
+    id: inkplate_display
+    greyscale: true
+    partial_updating: true
+    update_interval: never
+    model: inkplate_6_plus
+    
+    # Required pin definitions for Inkplate 6 Plus
+    ckv_pin: GPIO32
+    sph_pin: GPIO33
+    gmod_pin:
+      pca6416a: pca6416a_hub
+      number: 1
+    gpio0_enable_pin:
+      pca6416a: pca6416a_hub
+      number: 8
+    oe_pin:
+      pca6416a: pca6416a_hub
+      number: 0
+    spv_pin:
+      pca6416a: pca6416a_hub
+      number: 2
+    powerup_pin:
+      pca6416a: pca6416a_hub
+      number: 4
+    wakeup_pin:
+      pca6416a: pca6416a_hub
+      number: 3
+    vcom_pin:
+      pca6416a: pca6416a_hub
+      number: 5
+    
+    auto_clear_enabled: false
+
+lvgl:
+  displays:
+    - inkplate_display
+  buffer_size: 25%
+  default_font: montserrat_18
+  pages:
+    - id: status_unknown_page
+      widgets:
+        - label:
+            id: status_unknown_label
+            text_align: CENTER
+            text_font: montserrat_43
+            text: "CONNECTING..."
+            width: 1024
+            height: 758
+            pad_top: 358
+
+    - id: disarmed_page
+      widgets:
+        - button:
+            id: arm_away_btn
+            x: 51
+            y: 253
+            width: 441
+            height: 253
+            on_press:
+              then:
+                - script.execute: arm_away_script
+            widgets:
+              - label:
+                  id: arm_away_label
+                  x: 0
+                  y: 0
+                  width: 441
+                  height: 253
+                  align: CENTER
+                  text_font: font_button_large
+                  text: "ARM AWAY"
+                  text_align: CENTER
+                  pad_top: 86
+
+        - button:
+            id: arm_home_btn
+            x: 518
+            y: 253
+            width: 441
+            height: 253
+            on_press:
+              then:
+                - script.execute: arm_home_script
+            widgets:
+              - label:
+                  id: arm_home_label
+                  x: 0
+                  y: 0
+                  width: 441
+                  height: 253
+                  align: CENTER
+                  text_font: font_button_large
+                  text: "ARM STAY"
+                  text_align: CENTER
+                  pad_top: 86
+
+    - id: armed_page
+      widgets:
+        - label:
+            id: status_left_label
+            x: 25
+            y: 101
+            width: 278
+            height: 152
+            text_align: CENTER
+            text_font: montserrat_43
+            text: !lambda |-
+              std::string s = id(alarmo_state);
+              if (s == "arming") {
+                char buf[64];
+                sprintf(buf, "ARMING (%ds)", id(local_countdown));
+                return std::string(buf);
+              }
+              if (s == "armed_home")
+                return std::string("ARMED HOME");
+              if (s == "armed_away")
+                return std::string("ARMED AWAY");
+              if (s == "armed_night")
+                return std::string("ARMED NIGHT");
+              return std::string("OOPS");
+
+        - label:
+            id: pin_label
+            x: 328
+            y: 88
+            width: 657
+            height: 71
+            text_align: CENTER
+            text_font: montserrat_35
+            text: !lambda |-
+              if (id(invalid_flag)) return std::string("INVALID");
+              std::string s = "";
+              for (int i = 0; i < id(entered_pin).length(); i++) s += "●";
+              if (s.size() == 0) s = "";
+              return s;
+
+        - button:
+            id: btn_1
+            x: 341
+            y: 177
+            width: 152
+            height: 152
+            on_press:
+              then:
+                  - lambda: |-
+                      if (id(entered_pin).length() < 6) id(entered_pin) += "1";
+                  - lvgl.widget.redraw: pin_label
+                  - lambda: |-
+                      id(inkplate_display).update();
+            widgets:
+              - label:
+                  id: btn_1_label
+                  x: 0
+                  y: 0
+                  width: 152
+                  height: 152
+                  align: CENTER
+                  text: '1'
+                  text_font: montserrat_43
+                  text_align: CENTER
+                  pad_top: 53
+
+        - button:
+            id: btn_2
+            x: 505
+            y: 177
+            width: 152
+            height: 152
+            on_press:
+              then:
+                  - lambda: |-
+                      if (id(entered_pin).length() < 6) id(entered_pin) += "2";
+                  - lvgl.widget.redraw: pin_label
+                  - lambda: |-
+                      id(inkplate_display).update();
+            widgets:
+              - label:
+                  id: btn_2_label
+                  x: 0
+                  y: 0
+                  width: 152
+                  height: 152
+                  align: CENTER
+                  text: '2'
+                  text_font: montserrat_43
+                  text_align: CENTER
+                  pad_top: 53
+
+        - button:
+            id: btn_3
+            x: 669
+            y: 177
+            width: 152
+            height: 152
+            on_press:
+              then:
+                  - lambda: |-
+                      if (id(entered_pin).length() < 6) id(entered_pin) += "3";
+                  - lvgl.widget.redraw: pin_label
+                  - lambda: |-
+                      id(inkplate_display).update();
+            widgets:
+              - label:
+                  id: btn_3_label
+                  x: 0
+                  y: 0
+                  width: 152
+                  height: 152
+                  align: CENTER
+                  text: '3'
+                  text_font: montserrat_43
+                  text_align: CENTER
+                  pad_top: 53
+
+        - button:
+            id: btn_backspace
+            x: 835
+            y: 177
+            width: 152
+            height: 152
+            on_press:
+              then:
+                  - lambda: |-
+                      if (id(entered_pin).length() > 0) id(entered_pin).pop_back();
+                  - lvgl.widget.redraw: pin_label
+                  - lambda: |-
+                      id(inkplate_display).update();
+            widgets:
+              - label:
+                  id: btn_backspace_label
+                  x: 0
+                  y: 0
+                  width: 152
+                  height: 152
+                  align: CENTER
+                  text: 'DEL'
+                  text_font: montserrat_43
+                  text_align: CENTER
+                  pad_top: 53
+
+        - button:
+            id: btn_4
+            x: 341
+            y: 341
+            width: 152
+            height: 152
+            on_press:
+              then:
+                  - lambda: |-
+                      if (id(entered_pin).length() < 6) id(entered_pin) += "4";
+                  - lvgl.widget.redraw: pin_label
+                  - lambda: |-
+                      id(inkplate_display).update();
+            widgets:
+              - label:
+                  id: btn_4_label
+                  x: 0
+                  y: 0
+                  width: 152
+                  height: 152
+                  align: CENTER
+                  text: '4'
+                  text_font: montserrat_43
+                  text_align: CENTER
+                  pad_top: 53
+
+        - button:
+            id: btn_5
+            x: 505
+            y: 341
+            width: 152
+            height: 152
+            on_press:
+              then:
+                  - lambda: |-
+                      if (id(entered_pin).length() < 6) id(entered_pin) += "5";
+                  - lvgl.widget.redraw: pin_label
+                  - lambda: |-
+                      id(inkplate_display).update();
+            widgets:
+              - label:
+                  id: btn_5_label
+                  x: 0
+                  y: 0
+                  width: 152
+                  height: 152
+                  align: CENTER
+                  text: '5'
+                  text_font: montserrat_43
+                  text_align: CENTER
+                  pad_top: 53
+
+        - button:
+            id: btn_6
+            x: 669
+            y: 341
+            width: 152
+            height: 152
+            on_press:
+              then:
+                  - lambda: |-
+                      if (id(entered_pin).length() < 6) id(entered_pin) += "6";
+                  - lvgl.widget.redraw: pin_label
+                  - lambda: |-
+                      id(inkplate_display).update();
+            widgets:
+              - label:
+                  id: btn_6_label
+                  x: 0
+                  y: 0
+                  width: 152
+                  height: 152
+                  align: CENTER
+                  text: '6'
+                  text_font: montserrat_43
+                  text_align: CENTER
+                  pad_top: 53
+
+        - button:
+            id: btn_0
+            x: 835
+            y: 341
+            width: 152
+            height: 152
+            on_press:
+              then:
+                  - lambda: |-
+                      if (id(entered_pin).length() < 6) id(entered_pin) += "0";
+                  - lvgl.widget.redraw: pin_label
+                  - lambda: |-
+                      id(inkplate_display).update();
+            widgets:
+              - label:
+                  id: btn_0_label
+                  x: 0
+                  y: 0
+                  width: 152
+                  height: 152
+                  align: CENTER
+                  text: '0'
+                  text_font: montserrat_43
+                  text_align: CENTER
+                  pad_top: 53
+
+        - button:
+            id: btn_7
+            x: 341
+            y: 505
+            width: 152
+            height: 152
+            on_press:
+              - then:
+                  - lambda: |-
+                      if (id(entered_pin).length() < 6) id(entered_pin) += "7";
+                  - lvgl.widget.redraw: pin_label
+                  - lambda: |-
+                      id(inkplate_display).update();
+            widgets:
+              - label:
+                  id: btn_7_label
+                  x: 0
+                  y: 0
+                  width: 152
+                  height: 152
+                  align: CENTER
+                  text: '7'
+                  text_font: montserrat_43
+                  text_align: CENTER
+                  pad_top: 53
+
+        - button:
+            id: btn_8
+            x: 505
+            y: 505
+            width: 152
+            height: 152
+            on_press:
+              - then:
+                  - lambda: |-
+                      if (id(entered_pin).length() < 6) id(entered_pin) += "8";
+                  - lvgl.widget.redraw: pin_label
+                  - lambda: |-
+                      id(inkplate_display).update();
+            widgets:
+              - label:
+                  id: btn_8_label
+                  x: 0
+                  y: 0
+                  width: 152
+                  height: 152
+                  align: CENTER
+                  text: '8'
+                  text_font: montserrat_43
+                  text_align: CENTER
+                  pad_top: 53
+
+        - button:
+            id: btn_9
+            x: 669
+            y: 505
+            width: 152
+            height: 152
+            on_press:
+              - then:
+                  - lambda: |-
+                      if (id(entered_pin).length() < 6) id(entered_pin) += "9";
+                  - lvgl.widget.redraw: pin_label
+                  - lambda: |-
+                      id(inkplate_display).update();
+            widgets:
+              - label:
+                  id: btn_9_label
+                  x: 0
+                  y: 0
+                  width: 152
+                  height: 152
+                  align: CENTER
+                  text: '9'
+                  text_font: montserrat_43
+                  text_align: CENTER
+                  pad_top: 53
+
+        - button:
+            id: btn_submit
+            x: 835
+            y: 505
+            width: 152
+            height: 152
+            on_press:
+              - then:
+                  - script.execute: submit_pin_script
+            widgets:
+              - label:
+                  id: btn_submit_label
+                  x: 0
+                  y: 0
+                  width: 152
+                  height: 152
+                  align: CENTER
+                  text: 'OK'
+                  text_font: montserrat_34
+                  text_align: CENTER
+                  pad_top: 53
+
+font:
+  - file: "gfonts://Montserrat"
+    id: montserrat_18
+    size: 18
+  - file: "gfonts://Montserrat"
+    id: montserrat_35
+    size: 35
+  - file: "gfonts://Montserrat"
+    id: montserrat_43
+    size: 43
+  - file: "gfonts://Roboto"
+    id: font_medium
+    size: 30
+  - file: "gfonts://Roboto"
+    id: font_large
+    size: 45
+  - file: "gfonts://Roboto@700"
+    id: font_title
+    size: 45
+  - file: "gfonts://Roboto@700"
+    id: font_status
+    size: 35
+  - file: "gfonts://Roboto@700"
+    id: font_button
+    size: 33
+  - file: "gfonts://Roboto@700"
+    id: font_button_large
+    size: 81
+
+# Touchscreen - EKTF2232 for this Inkplate 6 Plus model
+switch:
+  - platform: gpio
+    name: 'Inkplate Touchscreen Enabled'
+    restore_mode: ALWAYS_ON
+    pin:
+      pca6416a: pca6416a_hub
+      number: 12
+      inverted: true
+
+touchscreen:
+  platform: ektf2232
+  id: touch_input
+  interrupt_pin: 36
+  reset_pin:
+    pca6416a: pca6416a_hub
+    number: 10
+  i2c_id: i2c_bus
+  
+  # on_touch:
+  #   - script.execute: handle_touch_light
+
+# Enable time component
+time:
+  - platform: homeassistant
+    id: ha_time
+
+# Sun component
+sun:
+  latitude: 47.7511
+  longitude: -122.1245
+
+# Binary sensor for connection status
+binary_sensor:
+  - platform: status
+    id: ha_connected
+    name: "Inkplate Connection Status"
+
+# Sun elevation sensor
+sensor:
+  - platform: sun
+    id: sun_elevation
+    name: Sun Elevation
+    type: elevation
+  - platform: homeassistant
+    id: alarmo_delay
+    entity_id: alarm_control_panel.alarmo
+    attribute: delay
+    unit_of_measurement: 's'
+
+# Global variables
+globals:
+  - id: entered_pin
+    type: std::string
+    restore_value: no
+    initial_value: '""'
+
+  - id: invalid_flag
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+  - id: local_countdown
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  - id: show_error
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+  - id: show_connection_error
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+  - id: light_timeout
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  - id: alarmo_state
+    type: std::string
+    restore_value: no
+    initial_value: '"disarmed"'
+  
+
+text_sensor:
+  - platform: homeassistant
+    id: alarmo_entity
+    entity_id: alarm_control_panel.alarmo
+    on_value:
+      then:
+        - lambda: |-
+            // Mirror HA alarm state into a local global so it can be overridden for testing
+            id(alarmo_state) = std::string(x);
+        - script.execute: update_ui_visibility
+
+# Interval for light timeout
+interval:
+  - interval: 1s
+    then:
+      - if:
+          condition:
+            lambda: 'return id(light_timeout) > 0;'
+          then:
+            - lambda: |-
+                id(light_timeout)--;
+                if (id(light_timeout) == 0) {
+                  auto call = id(inkplate_light).turn_off();
+                  call.perform();
+                }
+
+# Scripts
+script:
+  - id: handle_touch_light
+    then:
+      - logger.log: "UI: touch handler triggered"
+      - lambda: |-
+          if (id(sun_elevation).state > 0) {
+            auto call = id(inkplate_light).turn_off();
+            call.perform();
+            id(light_timeout) = 0;
+          } else {
+            auto call = id(inkplate_light).turn_on();
+            call.perform();
+            id(light_timeout) = 5;
+          }
+  - id: update_ui_visibility
+    then:
+      - if:
+          condition:
+            lambda: 'return (id(alarmo_state) == "unknown") || (id(alarmo_state) == "unavailable");'
+          then:
+            - lvgl.page.show: status_unknown_page
+            - lvgl.widget.redraw: status_unknown_label
+            - lambda: |-
+                id(inkplate_display).update();
+          else:
+            - if:
+                condition:
+                  lambda: 'return id(alarmo_state) == "disarmed";'
+                then:
+                  - lvgl.page.show: disarmed_page
+                  - lvgl.widget.redraw: arm_away_label
+                  - lvgl.widget.redraw: arm_home_label
+                  - lambda: |-
+                      id(inkplate_display).update();
+                else:
+                  - lvgl.page.show: armed_page
+                  - lvgl.widget.redraw: status_left_label
+                  - lvgl.widget.redraw: pin_label
+                  - lambda: |-
+                      id(inkplate_display).update();
+  - id: arm_away_script
+    then:
+      - logger.log: "UI: ARM AWAY script triggered"
+      - homeassistant.service:
+          service: alarmo.arm
+          data:
+            mode: away
+            entity_id: alarm_control_panel.alarmo
+
+  - id: arm_home_script
+    then:
+      - logger.log: "UI: ARM HOME script triggered"
+      - homeassistant.service:
+          service: alarmo.arm
+          data:
+            mode: home
+            entity_id: alarm_control_panel.alarmo
+
+  - id: submit_pin_script
+    then:
+      - homeassistant.service:
+          service: alarmo.disarm
+          data:
+            entity_id: alarm_control_panel.alarmo
+            code: !lambda 'return id(entered_pin);'
+      - delay: 1s
+      - lambda: |-
+          // If Alarmo didn't switch to 'disarmed' shortly after the service call,
+          // show INVALID for 2s and clear entered PIN.
+          if (id(alarmo_state) != "disarmed") {
+            id(invalid_flag) = true;
+          } else {
+            id(entered_pin) = "";
+          }
+      - if:
+          condition:
+            lambda: 'return id(invalid_flag);'
+          then:
+            - lvgl.widget.redraw: pin_label
+            - lambda: |-
+                id(inkplate_display).update();
+            - delay: 2s
+            - lambda: |-
+                id(invalid_flag) = false;
+                id(entered_pin) = "";
