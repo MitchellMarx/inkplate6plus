@@ -1,0 +1,10 @@
+id: status_unknown_page
+widgets:
+  - label:
+      id: status_unknown_label
+      text_align: CENTER
+      text_font: montserrat_43
+      text: "CONNECTING..."
+      width: 1024
+      height: 758
+      pad_top: 358

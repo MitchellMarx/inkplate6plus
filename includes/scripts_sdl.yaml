@@ -1,0 +1,81 @@
+script:
+  - id: arm_away_script
+    then:
+      - logger.log: "SDL: ARM AWAY triggered"
+      - lambda: |-
+          id(alarmo_state) = "arming";
+          id(local_countdown) = 10;
+      - script.execute: update_ui_visibility
+      - delay: 10s
+      - lambda: |-
+          if (id(alarmo_state) == "arming") {
+            id(alarmo_state) = "armed_away";
+            id(local_countdown) = 0;
+          }
+      - script.execute: update_ui_visibility
+
+  - id: arm_home_script
+    then:
+      - logger.log: "SDL: ARM HOME triggered"
+      - lambda: |-
+          id(alarmo_state) = "arming";
+          id(local_countdown) = 10;
+      - script.execute: update_ui_visibility
+      - delay: 10s
+      - lambda: |-
+          if (id(alarmo_state) == "arming") {
+            id(alarmo_state) = "armed_home";
+            id(local_countdown) = 0;
+          }
+      - script.execute: update_ui_visibility
+
+  - id: submit_pin_script
+    then:
+      - logger.log:
+          format: "SDL: PIN submitted: %s"
+          args: ['id(entered_pin).c_str()']
+      - lambda: |-
+          // Mock PIN validation - accept any 4+ digit code for testing
+          if (id(entered_pin).length() >= 4) {
+            id(alarmo_state) = "disarmed";
+            id(entered_pin) = "";
+            id(invalid_flag) = false;
+            id(local_countdown) = 0;
+          } else {
+            id(invalid_flag) = true;
+          }
+      - script.execute: update_ui_visibility
+      - if:
+          condition:
+            lambda: 'return id(invalid_flag);'
+          then:
+            - lvgl.widget.redraw: pin_label
+            - delay: 2s
+            - lambda: |-
+                id(invalid_flag) = false;
+                id(entered_pin) = "";
+            - lvgl.widget.redraw: pin_label
+
+interval:
+  - interval: 1s
+    then:
+      - lambda: |-
+          // Mock countdown behavior for testing
+          if (id(local_countdown) > 0) {
+            id(local_countdown)--;
+          }
+          // Handle light timeout
+          if (id(light_timeout) > 0) {
+            id(light_timeout)--;
+            if (id(light_timeout) == 0) {
+              auto call = id(inkplate_light).turn_off();
+              call.perform();
+            }
+          }
+      - lvgl.widget.redraw: status_left_label
+      - lvgl.widget.redraw: pin_label
+
+text_sensor:
+  - platform: template
+    id: alarmo_entity
+    name: "Alarmo Entity"

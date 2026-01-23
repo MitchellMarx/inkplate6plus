@@ -1,0 +1,28 @@
+font:
+  - file: "gfonts://Montserrat"
+    id: montserrat_18
+    size: 18
+  - file: "gfonts://Montserrat"
+    id: montserrat_35
+    size: 35
+  - file: "gfonts://Montserrat"
+    id: montserrat_43
+    size: 43
+  - file: "gfonts://Roboto"
+    id: font_medium
+    size: 30
+  - file: "gfonts://Roboto"
+    id: font_large
+    size: 45
+  - file: "gfonts://Roboto@700"
+    id: font_title
+    size: 45
+  - file: "gfonts://Roboto@700"
+    id: font_status
+    size: 35
+  - file: "gfonts://Roboto@700"
+    id: font_button
+    size: 33
+  - file: "gfonts://Roboto@700"
+    id: font_button_large
+    size: 81

@@ -1,0 +1,35 @@
+globals:
+  - id: entered_pin
+    type: std::string
+    restore_value: no
+    initial_value: '""'
+
+  - id: invalid_flag
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+  - id: local_countdown
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  - id: show_error
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+  - id: show_connection_error
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+  - id: light_timeout
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  - id: alarmo_state
+    type: std::string
+    restore_value: no
+    initial_value: '"disarmed"'

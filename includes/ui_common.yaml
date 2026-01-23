@@ -1,0 +1,54 @@
+lvgl:
+  displays:
+    - inkplate_display
+  buffer_size: 25%
+  default_font: montserrat_18
+  on_idle:
+    timeout: 60s
+    then:
+      - script.execute: handle_touch_light
+  pages:
+    - !include ui_pages/status_unknown_page.yaml
+    - !include ui_pages/disarmed_page.yaml
+    - !include ui_pages/armed_page.yaml
+
+script:
+  - id: handle_touch_light
+    then:
+      - logger.log: "UI: touch handler triggered"
+      - lambda: |-
+          if (id(sun_elevation).state > 0) {
+            auto call = id(inkplate_light).turn_off();
+            call.perform();
+            id(light_timeout) = 0;
+          } else {
+            auto call = id(inkplate_light).turn_on();
+            call.perform();
+            id(light_timeout) = 5;
+          }
+  - id: update_ui_visibility
+    then:
+      - if:
+          condition:
+            lambda: 'return (id(alarmo_state) == "unknown") || (id(alarmo_state) == "unavailable");'
+          then:
+            - lvgl.page.show: status_unknown_page
+            - lvgl.widget.redraw: status_unknown_label
+            - lambda: |-
+                id(inkplate_display).update();
+          else:
+            - if:
+                condition:
+                  lambda: 'return id(alarmo_state) == "disarmed";'
+                then:
+                  - lvgl.page.show: disarmed_page
+                  - lvgl.widget.redraw: arm_away_label
+                  - lvgl.widget.redraw: arm_home_label
+                  - lambda: |-
+                      id(inkplate_display).update();
+                else:
+                  - lvgl.page.show: armed_page
+                  - lvgl.widget.redraw: status_left_label
+                  - lvgl.widget.redraw: pin_label
+                  - lambda: |-
+                      id(inkplate_display).update();

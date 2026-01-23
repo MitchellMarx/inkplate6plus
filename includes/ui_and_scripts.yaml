@@ -1,0 +1,120 @@
+lvgl:
+  displays:
+    - inkplate_display
+  buffer_size: 25%
+  default_font: montserrat_18
+  pages:
+    - !include ui_pages/status_unknown_page.yaml
+    - !include ui_pages/disarmed_page.yaml
+    - !include ui_pages/armed_page.yaml
+
+script:
+  - id: handle_touch_light
+    then:
+      - logger.log: "UI: touch handler triggered"
+      - lambda: |-
+          if (id(sun_elevation).state > 0) {
+            auto call = id(inkplate_light).turn_off();
+            call.perform();
+            id(light_timeout) = 0;
+          } else {
+            auto call = id(inkplate_light).turn_on();
+            call.perform();
+            id(light_timeout) = 5;
+          }
+  - id: update_ui_visibility
+    then:
+      - if:
+          condition:
+            lambda: 'return (id(alarmo_state) == "unknown") || (id(alarmo_state) == "unavailable");'
+          then:
+            - lvgl.page.show: status_unknown_page
+            - lvgl.widget.redraw: status_unknown_label
+            - lambda: |-
+                id(inkplate_display).update();
+          else:
+            - if:
+                condition:
+                  lambda: 'return id(alarmo_state) == "disarmed";'
+                then:
+                  - lvgl.page.show: disarmed_page
+                  - lvgl.widget.redraw: arm_away_label
+                  - lvgl.widget.redraw: arm_home_label
+                  - lambda: |-
+                      id(inkplate_display).update();
+                else:
+                  - lvgl.page.show: armed_page
+                  - lvgl.widget.redraw: status_left_label
+                  - lvgl.widget.redraw: pin_label
+                  - lambda: |-
+                      id(inkplate_display).update();
+  - id: arm_away_script
+    then:
+      - logger.log: "UI: ARM AWAY script triggered"
+      - homeassistant.service:
+          service: alarmo.arm
+          data:
+            mode: away
+            entity_id: alarm_control_panel.alarmo
+
+  - id: arm_home_script
+    then:
+      - logger.log: "UI: ARM HOME script triggered"
+      - homeassistant.service:
+          service: alarmo.arm
+          data:
+            mode: home
+            entity_id: alarm_control_panel.alarmo
+
+  - id: submit_pin_script
+    then:
+      - homeassistant.service:
+          service: alarmo.disarm
+          data:
+            entity_id: alarm_control_panel.alarmo
+            code: !lambda 'return id(entered_pin);'
+      - delay: 1s
+      - lambda: |-
+          // If Alarmo didn't switch to 'disarmed' shortly after the service call,
+          // show INVALID for 2s and clear entered PIN.
+          if (id(alarmo_state) != "disarmed") {
+            id(invalid_flag) = true;
+          } else {
+            id(entered_pin) = "";
+          }
+      - if:
+          condition:
+            lambda: 'return id(invalid_flag);'
+          then:
+            - lvgl.widget.redraw: pin_label
+            - lambda: |-
+                id(inkplate_display).update();
+            - delay: 2s
+            - lambda: |-
+                id(invalid_flag) = false;
+                id(entered_pin) = "";
+
+interval:
+  - interval: 1s
+    then:
+      - if:
+          condition:
+            lambda: 'return id(light_timeout) > 0;'
+          then:
+            - lambda: |-
+                id(light_timeout)--;
+                if (id(light_timeout) == 0) {
+                  auto call = id(inkplate_light).turn_off();
+                  call.perform();
+                }
+
+text_sensor:
+  - platform: homeassistant
+    id: alarmo_entity
+    entity_id: alarm_control_panel.alarmo
+    on_value:
+      then:
+        - lambda: |-
+            // Mirror HA alarm state into a local global so it can be overridden for testing
+            id(alarmo_state) = std::string(x);
+        - script.execute: update_ui_visibility

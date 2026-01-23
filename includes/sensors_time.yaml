@@ -1,0 +1,26 @@
+time:
+  - platform: homeassistant
+    id: ha_time
+
+# Sun component
+sun:
+  latitude: 47.7511
+  longitude: -122.1245
+
+# Binary sensor for connection status
+binary_sensor:
+  - platform: status
+    id: ha_connected
+    name: "Inkplate Connection Status"
+
+# Sun elevation sensor
+sensor:
+  - platform: sun
+    id: sun_elevation
+    name: Sun Elevation
+    type: elevation
+  - platform: homeassistant
+    id: alarmo_delay
+    entity_id: alarm_control_panel.alarmo
+    attribute: delay
+    unit_of_measurement: 's'

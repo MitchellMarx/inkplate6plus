@@ -1,0 +1,44 @@
+esp32:
+  board: esp-wrover-kit
+  framework:
+    type: arduino
+  variant: esp32
+  cpu_frequency: 240MHz
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "0tN1NmkXjS+0UHmOd8sd7k5T7EbagXmPHxFXmAZo+zg="
+
+ota:
+  platform: esphome
+  password: "inkplate_ota_pass_2024"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  
+  ap:
+    ssid: "Inkplate-Alarm Fallback"
+
+captive_portal:
+
+# PSRAM configuration required for Inkplate display
+psram:
+  mode: quad
+  speed: 80MHz
+
+# I2C configuration for PCA6416A GPIO expander
+i2c:
+  - id: i2c_bus
+    sda: GPIO21
+    scl: GPIO22
+    scan: true
+
+# Inkplate 6 Plus configuration - Uses PCA6416A not MCP23017
+pca6416a:
+  - id: pca6416a_hub
+    address: 0x20

@@ -1,0 +1,45 @@
+id: disarmed_page
+widgets:
+  - button:
+      id: arm_away_btn
+      x: 51
+      y: 253
+      width: 441
+      height: 253
+      on_press:
+        then:
+          - script.execute: arm_away_script
+      widgets:
+        - label:
+            id: arm_away_label
+            x: 0
+            y: 0
+            width: 441
+            height: 253
+            align: CENTER
+            text_font: font_button_large
+            text: "ARM AWAY"
+            text_align: CENTER
+            pad_top: 86
+
+  - button:
+      id: arm_home_btn
+      x: 518
+      y: 253
+      width: 441
+      height: 253
+      on_press:
+        then:
+          - script.execute: arm_home_script
+      widgets:
+        - label:
+            id: arm_home_label
+            x: 0
+            y: 0
+            width: 441
+            height: 253
+            align: CENTER
+            text_font: font_button_large
+            text: "ARM STAY"
+            text_align: CENTER
+            pad_top: 86

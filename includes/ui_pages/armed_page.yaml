@@ -1,0 +1,347 @@
+id: armed_page
+widgets:
+  - label:
+      id: status_left_label
+      x: 25
+      y: 101
+      width: 278
+      height: 152
+      text_align: CENTER
+      text_font: montserrat_43
+      text: !lambda |-
+        std::string s = id(alarmo_state);
+        if (s == "arming") {
+          char buf[64];
+          sprintf(buf, "ARMING (%ds)", id(local_countdown));
+          return std::string(buf);
+        }
+        if (s == "armed_home")
+          return std::string("ARMED HOME");
+        if (s == "armed_away")
+          return std::string("ARMED AWAY");
+        if (s == "armed_night")
+          return std::string("ARMED NIGHT");
+        return std::string("OOPS");
+
+  - label:
+      id: pin_label
+      x: 328
+      y: 88
+      width: 657
+      height: 71
+      text_align: CENTER
+      text_font: montserrat_35
+      text: !lambda |-
+        if (id(invalid_flag)) return std::string("INVALID");
+        std::string s = "";
+        for (int i = 0; i < id(entered_pin).length(); i++) s += "●";
+        if (s.size() == 0) s = "";
+        return s;
+
+  - button:
+      id: btn_1
+      x: 341
+      y: 177
+      width: 152
+      height: 152
+      on_press:
+        then:
+            - lambda: |-
+                if (id(entered_pin).length() < 6) id(entered_pin) += "1";
+            - lvgl.widget.redraw: pin_label
+            - lambda: |-
+                id(inkplate_display).update();
+      widgets:
+        - label:
+            id: btn_1_label
+            x: 0
+            y: 0
+            width: 152
+            height: 152
+            align: CENTER
+            text: '1'
+            text_font: montserrat_43
+            text_align: CENTER
+            pad_top: 53
+
+  - button:
+      id: btn_2
+      x: 505
+      y: 177
+      width: 152
+      height: 152
+      on_press:
+        then:
+            - lambda: |-
+                if (id(entered_pin).length() < 6) id(entered_pin) += "2";
+            - lvgl.widget.redraw: pin_label
+            - lambda: |-
+                id(inkplate_display).update();
+      widgets:
+        - label:
+            id: btn_2_label
+            x: 0
+            y: 0
+            width: 152
+            height: 152
+            align: CENTER
+            text: '2'
+            text_font: montserrat_43
+            text_align: CENTER
+            pad_top: 53
+
+  - button:
+        id: btn_3
+        x: 669
+        y: 177
+        width: 152
+        height: 152
+        on_press:
+          then:
+              - lambda: |-
+                  if (id(entered_pin).length() < 6) id(entered_pin) += "3";
+              - lvgl.widget.redraw: pin_label
+              - lambda: |-
+                  id(inkplate_display).update();
+        widgets:
+          - label:
+              id: btn_3_label
+              x: 0
+              y: 0
+              width: 152
+              height: 152
+              align: CENTER
+              text: '3'
+              text_font: montserrat_43
+              text_align: CENTER
+              pad_top: 53
+
+  - button:
+        id: btn_backspace
+        x: 835
+        y: 177
+        width: 152
+        height: 152
+        on_press:
+          then:
+              - lambda: |-
+                  if (id(entered_pin).length() > 0) id(entered_pin).pop_back();
+              - lvgl.widget.redraw: pin_label
+              - lambda: |-
+                  id(inkplate_display).update();
+        widgets:
+          - label:
+              id: btn_backspace_label
+              x: 0
+              y: 0
+              width: 152
+              height: 152
+              align: CENTER
+              text: 'DEL'
+              text_font: montserrat_43
+              text_align: CENTER
+              pad_top: 53
+
+  - button:
+        id: btn_4
+        x: 341
+        y: 341
+        width: 152
+        height: 152
+        on_press:
+          then:
+              - lambda: |-
+                  if (id(entered_pin).length() < 6) id(entered_pin) += "4";
+              - lvgl.widget.redraw: pin_label
+              - lambda: |-
+                  id(inkplate_display).update();
+        widgets:
+          - label:
+              id: btn_4_label
+              x: 0
+              y: 0
+              width: 152
+              height: 152
+              align: CENTER
+              text: '4'
+              text_font: montserrat_43
+              text_align: CENTER
+              pad_top: 53
+
+  - button:
+        id: btn_5
+        x: 505
+        y: 341
+        width: 152
+        height: 152
+        on_press:
+          then:
+              - lambda: |-
+                  if (id(entered_pin).length() < 6) id(entered_pin) += "5";
+              - lvgl.widget.redraw: pin_label
+              - lambda: |-
+                  id(inkplate_display).update();
+        widgets:
+          - label:
+              id: btn_5_label
+              x: 0
+              y: 0
+              width: 152
+              height: 152
+              align: CENTER
+              text: '5'
+              text_font: montserrat_43
+              text_align: CENTER
+              pad_top: 53
+
+  - button:
+        id: btn_6
+        x: 669
+        y: 341
+        width: 152
+        height: 152
+        on_press:
+          then:
+              - lambda: |-
+                  if (id(entered_pin).length() < 6) id(entered_pin) += "6";
+              - lvgl.widget.redraw: pin_label
+              - lambda: |-
+                  id(inkplate_display).update();
+        widgets:
+          - label:
+              id: btn_6_label
+              x: 0
+              y: 0
+              width: 152
+              height: 152
+              align: CENTER
+              text: '6'
+              text_font: montserrat_43
+              text_align: CENTER
+              pad_top: 53
+
+  - button:
+      id: btn_0
+      x: 835
+      y: 341
+      width: 152
+      height: 152
+      on_press:
+        then:
+            - lambda: |-
+                if (id(entered_pin).length() < 6) id(entered_pin) += "0";
+            - lvgl.widget.redraw: pin_label
+            - lambda: |-
+                id(inkplate_display).update();
+      widgets:
+        - label:
+            id: btn_0_label
+            x: 0
+            y: 0
+            width: 152
+            height: 152
+            align: CENTER
+            text: '0'
+            text_font: montserrat_43
+            text_align: CENTER
+            pad_top: 53
+
+  - button:
+      id: btn_7
+      x: 341
+      y: 505
+      width: 152
+      height: 152
+      on_press:
+        - then:
+            - lambda: |-
+                if (id(entered_pin).length() < 6) id(entered_pin) += "7";
+            - lvgl.widget.redraw: pin_label
+            - lambda: |-
+                id(inkplate_display).update();
+      widgets:
+        - label:
+            id: btn_7_label
+            x: 0
+            y: 0
+            width: 152
+            height: 152
+            align: CENTER
+            text: '7'
+            text_font: montserrat_43
+            text_align: CENTER
+            pad_top: 53
+
+  - button:
+      id: btn_8
+      x: 505
+      y: 505
+      width: 152
+      height: 152
+      on_press:
+        - then:
+            - lambda: |-
+                if (id(entered_pin).length() < 6) id(entered_pin) += "8";
+            - lvgl.widget.redraw: pin_label
+            - lambda: |-
+                id(inkplate_display).update();
+      widgets:
+        - label:
+            id: btn_8_label
+            x: 0
+            y: 0
+            width: 152
+            height: 152
+            align: CENTER
+            text: '8'
+            text_font: montserrat_43
+            text_align: CENTER
+            pad_top: 53
+
+  - button:
+      id: btn_9
+      x: 669
+      y: 505
+      width: 152
+      height: 152
+      on_press:
+        - then:
+            - lambda: |-
+                if (id(entered_pin).length() < 6) id(entered_pin) += "9";
+            - lvgl.widget.redraw: pin_label
+            - lambda: |-
+                id(inkplate_display).update();
+      widgets:
+        - label:
+            id: btn_9_label
+            x: 0
+            y: 0
+            width: 152
+            height: 152
+            align: CENTER
+            text: '9'
+            text_font: montserrat_43
+            text_align: CENTER
+            pad_top: 53
+
+  - button:
+      id: btn_submit
+      x: 835
+      y: 505
+      width: 152
+      height: 152
+      on_press:
+        - then:
+            - script.execute: submit_pin_script
+      widgets:
+        - label:
+            id: btn_submit_label
+            x: 0
+            y: 0
+            width: 152
+            height: 152
+            align: CENTER
+            text: 'OK'
+            text_font: montserrat_34
+            text_align: CENTER
+            pad_top: 53
