@@ -16,7 +16,7 @@ display:
   - platform: inkplate
     id: inkplate_display
     greyscale: true
-    partial_updating: false
+    partial_updating: true
     update_interval: never
     model: inkplate_6_plus
     

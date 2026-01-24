@@ -24,10 +24,10 @@ globals:
     restore_value: no
     initial_value: 'false'
 
-  - id: light_timeout
-    type: int
-    restore_value: no
-    initial_value: '0'
+  # - id: light_timeout
+  #   type: int
+  #   restore_value: no
+  #   initial_value: '0'
 
   - id: alarmo_state
     type: std::string

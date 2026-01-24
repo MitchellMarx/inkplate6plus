@@ -14,3 +14,15 @@ esphome:
     then:
       - delay: 5s
       - script.execute: update_ui_visibility
+
+lvgl:
+  on_draw_end:
+    component.update: inkplate_display
+  on_resume:
+    lambda: |-
+      auto call = id(inkplate_light).turn_on();
+      call.perform();
+  on_pause:
+    lambda: |-
+      auto call = id(inkplate_light).turn_off();
+      call.perform();

@@ -1,7 +1,9 @@
 lvgl:
+  # update_when_display_idle : true
+  on_draw_end:
+    component.update: inkplate_display
   displays:
     - inkplate_display
-  buffer_size: 25%
   default_font: montserrat_18
   # on_idle:
   #   timeout: 60s
@@ -13,19 +15,19 @@ lvgl:
     - !include ui_pages/armed_page.yaml
 
 script:
-  - id: handle_touch_light
-    then:
-      - logger.log: "UI: touch handler triggered"
-      - lambda: |-
-          if (id(sun_elevation).state > 0) {
-            auto call = id(inkplate_light).turn_off();
-            call.perform();
-            id(light_timeout) = 0;
-          } else {
-            auto call = id(inkplate_light).turn_on();
-            call.perform();
-            id(light_timeout) = 5;
-          }
+  # - id: handle_touch_light
+  #   then:
+  #     - logger.log: "UI: touch handler triggered"
+  #     - lambda: |-
+  #         if (id(sun_elevation).state > 0) {
+  #           auto call = id(inkplate_light).turn_off();
+  #           call.perform();
+  #           id(light_timeout) = 0;
+  #         } else {
+  #           auto call = id(inkplate_light).turn_on();
+  #           call.perform();
+  #           id(light_timeout) = 5;
+  #         }
   - id: update_ui_visibility
     then:
       - if:
@@ -34,8 +36,8 @@ script:
           then:
             - lvgl.page.show: status_unknown_page
             - lvgl.widget.redraw: status_unknown_label
-            - lambda: |-
-                id(inkplate_display).update();
+            # - lambda: |-
+            #     id(inkplate_display).update();
           else:
             - if:
                 condition:
@@ -44,11 +46,11 @@ script:
                   - lvgl.page.show: disarmed_page
                   - lvgl.widget.redraw: arm_away_label
                   - lvgl.widget.redraw: arm_home_label
-                  - lambda: |-
-                      id(inkplate_display).update();
+                  # - lambda: |-
+                  #     id(inkplate_display).update();
                 else:
                   - lvgl.page.show: armed_page
                   - lvgl.widget.redraw: status_left_label
                   - lvgl.widget.redraw: pin_label
-                  - lambda: |-
-                      id(inkplate_display).update();
+                  # - lambda: |-
+                  #     id(inkplate_display).update();

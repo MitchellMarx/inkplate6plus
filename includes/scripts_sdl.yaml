@@ -56,24 +56,24 @@ script:
                 id(entered_pin) = "";
             - lvgl.widget.redraw: pin_label
 
-interval:
-  - interval: 1s
-    then:
-      - lambda: |-
-          // Mock countdown behavior for testing
-          if (id(local_countdown) > 0) {
-            id(local_countdown)--;
-          }
-          // Handle light timeout
-          if (id(light_timeout) > 0) {
-            id(light_timeout)--;
-            if (id(light_timeout) == 0) {
-              auto call = id(inkplate_light).turn_off();
-              call.perform();
-            }
-          }
-      - lvgl.widget.redraw: status_left_label
-      - lvgl.widget.redraw: pin_label
+# interval:
+#   - interval: 1s
+#     then:
+#       - lambda: |-
+#           // Mock countdown behavior for testing
+#           if (id(local_countdown) > 0) {
+#             id(local_countdown)--;
+#           }
+#           // Handle light timeout
+#           if (id(light_timeout) > 0) {
+#             id(light_timeout)--;
+#             if (id(light_timeout) == 0) {
+#               auto call = id(inkplate_light).turn_off();
+#               call.perform();
+#             }
+#           }
+#       - lvgl.widget.redraw: status_left_label
+#       - lvgl.widget.redraw: pin_label
 
 text_sensor:
   - platform: template

@@ -38,26 +38,26 @@ script:
             lambda: 'return id(invalid_flag);'
           then:
             - lvgl.widget.redraw: pin_label
-            - lambda: |-
-                id(inkplate_display).update();
+            # - lambda: |-
+            #     id(inkplate_display).update();
             - delay: 2s
             - lambda: |-
                 id(invalid_flag) = false;
                 id(entered_pin) = "";
 
-interval:
-  - interval: 1s
-    then:
-      - if:
-          condition:
-            lambda: 'return id(light_timeout) > 0;'
-          then:
-            - lambda: |-
-                id(light_timeout)--;
-                if (id(light_timeout) == 0) {
-                  auto call = id(inkplate_light).turn_off();
-                  call.perform();
-                }
+# interval:
+#   - interval: 1s
+#     then:
+#       - if:
+#           condition:
+#             lambda: 'return id(light_timeout) > 0;'
+#           then:
+#             - lambda: |-
+#                 id(light_timeout)--;
+#                 if (id(light_timeout) == 0) {
+#                   auto call = id(inkplate_light).turn_off();
+#                   call.perform();
+#                 }
 
 text_sensor:
   - platform: homeassistant
