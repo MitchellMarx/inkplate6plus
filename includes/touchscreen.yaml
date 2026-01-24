@@ -9,9 +9,14 @@ switch:
 
 touchscreen:
   platform: ektf2232
+  transform:
+    mirror_x: false
+    mirror_y: false
+    swap_xy: true
   id: touch_input
   interrupt_pin: 36
   reset_pin:
     pca6416a: pca6416a_hub
     number: 10
   i2c_id: i2c_bus
+  update_interval: never

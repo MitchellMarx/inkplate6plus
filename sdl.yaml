@@ -52,18 +52,19 @@ lvgl:
       - obj:
           id: debug_bar
           x: 0
-          y: 698
+          y: 638
           width: 1024
-          height: 60
+          height: 120
           bg_color: 0x404040
           clickable: false
           widgets:
+            # First row
             - button:
-                x: 10
+                x: 5
                 y: 5
-                width: 200
+                width: 155
                 height: 50
-                on_press:
+                on_click:
                   - lambda: |-
                       id(alarmo_state) = "disarmed";
                   - script.execute: update_ui_visibility
@@ -72,37 +73,77 @@ lvgl:
                       text: "DISARMED"
                       align: CENTER
             - button:
-                x: 220
+                x: 165
                 y: 5
-                width: 200
+                width: 155
                 height: 50
-                on_press:
+                on_click:
                   - lambda: |-
                       id(alarmo_state) = "armed_away";
                   - script.execute: update_ui_visibility
                 widgets:
                   - label:
-                      text: "ARMED AWAY"
+                      text: "AWAY"
                       align: CENTER
             - button:
-                x: 430
+                x: 325
                 y: 5
-                width: 200
+                width: 155
                 height: 50
-                on_press:
+                on_click:
                   - lambda: |-
                       id(alarmo_state) = "armed_home";
                   - script.execute: update_ui_visibility
                 widgets:
                   - label:
-                      text: "ARMED HOME"
+                      text: "HOME"
                       align: CENTER
             - button:
-                x: 640
+                x: 485
                 y: 5
-                width: 174
+                width: 155
                 height: 50
-                on_press:
+                on_click:
+                  - lambda: |-
+                      id(alarmo_state) = "armed_night";
+                  - script.execute: update_ui_visibility
+                widgets:
+                  - label:
+                      text: "NIGHT"
+                      align: CENTER
+            - button:
+                x: 645
+                y: 5
+                width: 155
+                height: 50
+                on_click:
+                  - lambda: |-
+                      id(alarmo_state) = "armed_vacation";
+                  - script.execute: update_ui_visibility
+                widgets:
+                  - label:
+                      text: "VACATION"
+                      align: CENTER
+            - button:
+                x: 805
+                y: 5
+                width: 214
+                height: 50
+                on_click:
+                  - lambda: |-
+                      id(alarmo_state) = "armed_custom_bypass";
+                  - script.execute: update_ui_visibility
+                widgets:
+                  - label:
+                      text: "CUSTOM"
+                      align: CENTER
+            # Second row
+            - button:
+                x: 5
+                y: 60
+                width: 200
+                height: 50
+                on_click:
                   - lambda: |-
                       id(alarmo_state) = "arming";
                       id(local_countdown) = 15;
@@ -110,6 +151,56 @@ lvgl:
                 widgets:
                   - label:
                       text: "ARMING"
+                      align: CENTER
+            - button:
+                x: 210
+                y: 60
+                width: 200
+                height: 50
+                on_click:
+                  - lambda: |-
+                      id(alarmo_state) = "pending";
+                      id(local_countdown) = 15;
+                  - script.execute: update_ui_visibility
+                widgets:
+                  - label:
+                      text: "PENDING"
+                      align: CENTER
+            - button:
+                x: 415
+                y: 60
+                width: 200
+                height: 50
+                on_click:
+                  - lambda: |-
+                      id(alarmo_state) = "triggered";
+                  - script.execute: update_ui_visibility
+                widgets:
+                  - label:
+                      text: "TRIGGERED"
+                      align: CENTER
+            - button:
+                x: 620
+                y: 60
+                width: 200
+                height: 50
+                on_click:
+                  - lambda: |-
+                      if (id(open_sensors_list) == "") {
+                        id(open_sensors_list) = "sensor.door_open";
+                      } else {
+                        id(open_sensors_list) = "";
+                      }
+                  - lvgl.widget.redraw: sensors_toggle_label
+                widgets:
+                  - label:
+                      id: sensors_toggle_label
+                      text: !lambda |-
+                        if (id(open_sensors_list) == "") {
+                          return std::string("SENSORS: CLEAR");
+                        } else {
+                          return std::string("SENSORS: OPEN");
+                        }
                       align: CENTER
 
 display:
@@ -122,3 +213,4 @@ display:
 touchscreen:
   - platform: sdl
     display: inkplate_display
+    id: touch_input

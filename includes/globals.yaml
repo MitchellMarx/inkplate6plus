@@ -33,3 +33,8 @@ globals:
     type: std::string
     restore_value: no
     initial_value: '"disarmed"'
+
+  - id: open_sensors_list
+    type: std::string
+    restore_value: no
+    initial_value: '""'

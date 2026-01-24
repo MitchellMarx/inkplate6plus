@@ -6,7 +6,7 @@ widgets:
       y: 253
       width: 441
       height: 253
-      on_press:
+      on_click:
         then:
           - script.execute: arm_away_script
       widgets:
@@ -28,7 +28,7 @@ widgets:
       y: 253
       width: 441
       height: 253
-      on_press:
+      on_click:
         then:
           - script.execute: arm_home_script
       widgets:

@@ -3,10 +3,10 @@ lvgl:
     - inkplate_display
   buffer_size: 25%
   default_font: montserrat_18
-  on_idle:
-    timeout: 60s
-    then:
-      - script.execute: handle_touch_light
+  # on_idle:
+  #   timeout: 60s
+  #   then:
+  #     - script.execute: handle_touch_light
   pages:
     - !include ui_pages/status_unknown_page.yaml
     - !include ui_pages/disarmed_page.yaml
