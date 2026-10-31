@@ -19,3 +19,11 @@ touchscreen:
     pca6416a: pca6416a_hub
     number: 10
   i2c_id: i2c_bus
+  on_touch:
+    - lambda: 'id(touch_down) = true;'
+    # Where each touch lands, to calibrate: the top half of OK was registering as 0 (2026-10-31)
+    - logger.log:
+        format: "TOUCH: x=%d y=%d (raw %d,%d)"
+        args: ['touch.x', 'touch.y', 'touch.x_raw', 'touch.y_raw']
+  on_release:
+    - lambda: 'id(touch_down) = false;'

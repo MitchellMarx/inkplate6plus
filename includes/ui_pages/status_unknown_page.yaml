@@ -4,7 +4,13 @@ widgets:
       id: status_unknown_label
       text_align: CENTER
       text_font: montserrat_43
-      text: "CONNECTING..."
+      long_mode: WRAP
+      text: !lambda |-
+        if (!id(ha_connected_flag))
+          return std::string("NOT CONNECTED TO\nHOME ASSISTANT");
+        if (id(alarmo_state) == "unavailable")
+          return std::string("ALARM UNAVAILABLE\nIN HOME ASSISTANT");
+        return std::string("CONNECTING...");
       width: 1024
       height: 758
       pad_top: 358

@@ -7,11 +7,25 @@ sun:
   latitude: 47.7511
   longitude: -122.1245
 
-# Binary sensor for connection status
+# Binary sensor for connection status. When the Home Assistant API connection
+# drops, the panel cannot arm or disarm anything, so say so on screen instead
+# of showing a stale disarmed/armed page. Home Assistant re-sends the alarm
+# state when it reconnects, which restores the right page.
 binary_sensor:
   - platform: status
     id: ha_connected
     name: "Inkplate Connection Status"
+    on_state:
+      then:
+        - logger.log:
+            format: "HA: API connection %s"
+            args: ['x ? "up" : "down"']
+        - lambda: |-
+            id(ha_connected_flag) = x;
+            if (!x) {
+              id(alarmo_state) = "unavailable";
+            }
+        - script.execute: update_ui_visibility
 
 # Sun elevation sensor
 sensor:

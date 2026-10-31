@@ -1,24 +1,40 @@
 script:
   - id: arm_away_script
+    mode: restart
     then:
       - logger.log: "UI: ARM AWAY script triggered"
+      - lambda: |-
+          id(arm_error) = false;
+      - lvgl.widget.refresh: disarmed_status_label
+      - lvgl.widget.redraw: disarmed_status_label
       - homeassistant.service:
           service: alarmo.arm
           data:
             mode: away
             entity_id: alarm_control_panel.alarmo
+      - script.execute: check_arm_result
 
   - id: arm_home_script
+    mode: restart
     then:
       - logger.log: "UI: ARM HOME script triggered"
+      - lambda: |-
+          id(arm_error) = false;
+      - lvgl.widget.refresh: disarmed_status_label
+      - lvgl.widget.redraw: disarmed_status_label
       - homeassistant.service:
           service: alarmo.arm
           data:
             mode: home
             entity_id: alarm_control_panel.alarmo
+      - script.execute: check_arm_result
 
   - id: submit_pin_script
     then:
+      - logger.log:
+          format: "UI: OK pressed with %u digits, calling alarmo.disarm"
+          args: ['(unsigned) id(entered_pin).length()']
+      # Alarmo validates the code itself (its "use disarm code" setting must be on).
       - homeassistant.service:
           service: alarmo.disarm
           data:
@@ -37,13 +53,14 @@ script:
           condition:
             lambda: 'return id(invalid_flag);'
           then:
+            - lvgl.widget.refresh: pin_label
             - lvgl.widget.redraw: pin_label
-            # - lambda: |-
-            #     id(inkplate_display).update();
             - delay: 2s
             - lambda: |-
                 id(invalid_flag) = false;
                 id(entered_pin) = "";
+            - lvgl.widget.refresh: pin_label
+            - lvgl.widget.redraw: pin_label
 
 # interval:
 #   - interval: 1s
@@ -65,7 +82,41 @@ text_sensor:
     entity_id: alarm_control_panel.alarmo
     on_value:
       then:
+        - logger.log:
+            format: "HA: alarm state '%s'"
+            args: ['x.c_str()']
         - lambda: |-
             // Mirror HA alarm state into a local global so it can be overridden for testing
             id(alarmo_state) = std::string(x);
         - script.execute: update_ui_visibility
+
+  # Friendly names of the sensors that blocked the last arm attempt, rendered by
+  # Home Assistant (Alarmo's own open_sensors attribute only carries entity ids).
+  # Requires this template sensor in Home Assistant's configuration.yaml:
+  #
+  #   template:
+  #     - sensor:
+  #         - name: Alarmo Open Sensor Names
+  #           unique_id: alarmo_open_sensor_names
+  #           state: >-
+  #             {{ (state_attr('alarm_control_panel.alarmo', 'open_sensors') or {}).keys()
+  #                | map('state_attr', 'friendly_name') | reject('none') | join(', ') }}
+  #
+  - platform: homeassistant
+    id: alarmo_open_sensors
+    entity_id: sensor.alarmo_open_sensor_names
+    on_value:
+      then:
+        - logger.log:
+            format: "HA: open sensor names '%s'"
+            args: ['x.c_str()']
+        - lambda: |-
+            std::string names = x;
+            // "unknown"/"unavailable" come from HA while the template sensor is not ready.
+            if (names == "unknown" || names == "unavailable" || names == "None")
+              names = "";
+            id(open_sensors_list) = names;
+            // Whatever happened before, the open-sensor list is the current explanation.
+            id(arm_error) = false;
+        - lvgl.widget.refresh: disarmed_status_label
+        - lvgl.widget.redraw: disarmed_status_label

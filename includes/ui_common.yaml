@@ -1,14 +1,79 @@
 lvgl:
-  # update_when_display_idle : true
-  on_draw_end:
-    component.update: inkplate_display
+  # NOTE: no on_draw_end here. The SDL display presents itself as LVGL draws,
+  # and the Inkplate needs a coalesced refresh (see inkplate6plus.yaml).
   displays:
     - inkplate_display
   default_font: montserrat_18
+  # Black-on-white styling for a 1-bit e-ink panel: any pixel that is not pure
+  # black is shown white, so buttons are white with a black border and black
+  # text. No pressed/focused variants: a state change must not cause a redraw.
+  bg_color: 0xFFFFFF
+  bg_opa: COVER
+  text_color: 0x000000
+  theme:
+    button:
+      bg_color: 0xFFFFFF
+      bg_opa: COVER
+      border_color: 0x000000
+      border_width: 5
+      border_opa: COVER
+      radius: 18
+      shadow_width: 0
+      outline_width: 0
+      text_color: 0x000000
+    label:
+      text_color: 0x000000
+    obj:
+      bg_color: 0xFFFFFF
+      bg_opa: COVER
+      text_color: 0x000000
   # on_idle:
   #   timeout: 60s
   #   then:
   #     - script.execute: handle_touch_light
+  # On every page: a siren toggle in the bottom-left corner, free on all three
+  # pages. Lets him silence the siren (and the speakers' siren sound) before he
+  # has managed to disarm, or sound it by hand (2026-10-31).
+  top_layer:
+    widgets:
+      - button:
+          id: siren_toggle_btn
+          x: 51
+          y: 525
+          width: 252
+          height: 130
+          on_click:
+            then:
+              - if:
+                  condition:
+                    lambda: 'return id(security_siren).state || id(speaker_siren_playing).state;'
+                  then:
+                    - switch.turn_off: security_siren
+                    # HA's "Stop Siren and Reset Volume": ends the looping
+                    # speaker siren script and stops the Everywhere group.
+                    - homeassistant.service:
+                        service: script.stop_siren
+                  else:
+                    # By hand, like the alarm going off: hallway siren and the speakers.
+                    - switch.turn_on: security_siren
+                    - homeassistant.service:
+                        service: script.turn_on
+                        data:
+                          entity_id: script.play_siren_everywhere
+          widgets:
+            - label:
+                id: siren_toggle_label
+                x: 0
+                y: 0
+                width: 252
+                height: 130
+                align: CENTER
+                text_align: CENTER
+                text_font: montserrat_43
+                pad_top: 16
+                text: !lambda |-
+                  bool on = id(security_siren).state || id(speaker_siren_playing).state;
+                  return std::string(on ? "SIREN\nON" : "SIREN\nOFF");
   pages:
     - !include ui_pages/status_unknown_page.yaml
     - !include ui_pages/disarmed_page.yaml
@@ -28,29 +93,97 @@ script:
   #           call.perform();
   #           id(light_timeout) = 5;
   #         }
+  # Remove the default theme's LV_STATE_PRESSED styles from every button so that
+  # pressing one does not change its appearance and therefore does not trigger a
+  # redraw. On the Inkplate every redraw costs a full blocking refresh, so a tap
+  # should only redraw once (for the label update), not twice (press + release).
+  - id: strip_button_pressed_styles
+    then:
+      - logger.log:
+          format: "UI: stripping pressed styles (arm_away_btn=%p)"
+          args: ['(void *) id(arm_away_btn)']
+      - lambda: |-
+          if (id(arm_away_btn) == nullptr) {
+            ESP_LOGW("ui", "buttons not created yet, pressed styles NOT stripped");
+            return;
+          }
+          lv_obj_t *buttons[] = {
+              id(arm_away_btn), id(arm_home_btn),
+              id(btn_0), id(btn_1), id(btn_2), id(btn_3), id(btn_4),
+              id(btn_5), id(btn_6), id(btn_7), id(btn_8), id(btn_9),
+              id(btn_backspace), id(btn_submit), id(siren_toggle_btn),
+          };
+          for (auto *btn : buttons) {
+            lv_obj_remove_style(btn, nullptr, LV_PART_MAIN | LV_STATE_PRESSED);
+          }
+          // The touch chip reports one tap as two touches 80-330 ms apart, the
+          // second a little higher, so LVGL clicks twice, sometimes on the key
+          // above (2026-10-31). Drop any click within 450 ms of the last one,
+          // before the button's own on_click handlers run.
+          static uint32_t last_click_ms = 0;
+          static bool have_click = false;
+          for (auto *btn : buttons) {
+            lv_obj_add_event_cb(btn, [](lv_event_t *e) {
+              uint32_t now = millis();
+              if (have_click && now - last_click_ms < 450) {
+                ESP_LOGD("ui", "dropping repeat click %u ms after the last", now - last_click_ms);
+                lv_event_stop_processing(e);
+                return;
+              }
+              ESP_LOGD("ui", "click on %s", lv_label_get_text(lv_obj_get_child(lv_event_get_current_target_obj(e), 0)));
+              have_click = true;
+              last_click_ms = now;
+            }, (lv_event_code_t) (LV_EVENT_CLICKED | LV_EVENT_PREPROCESS), nullptr);
+          }
+
+  # Called by the arm scripts a few seconds after the arm request went out.
+  # If the alarm is still disarmed by then, Home Assistant either refused
+  # (Alarmo: open sensors, code required, ...) or never acted on the request.
+  - id: check_arm_result
+    mode: restart
+    then:
+      - delay: 3s
+      - if:
+          condition:
+            lambda: |-
+              bool sensors_open = !id(open_sensors_list).empty();
+              return id(alarmo_state) == "disarmed" && !sensors_open;
+          then:
+            - lambda: |-
+                id(arm_error) = true;
+            - lvgl.widget.refresh: disarmed_status_label
+            - lvgl.widget.redraw: disarmed_status_label
+
   - id: update_ui_visibility
     then:
+      - logger.log:
+          format: "UI: state='%s' connected=%d open_sensors='%s' arm_error=%d"
+          args: ['id(alarmo_state).c_str()', 'id(ha_connected_flag)', 'id(open_sensors_list).c_str()', 'id(arm_error)']
       - if:
           condition:
             lambda: 'return (id(alarmo_state) == "unknown") || (id(alarmo_state) == "unavailable");'
           then:
             - lvgl.page.show: status_unknown_page
+            - lvgl.widget.refresh: status_unknown_label
             - lvgl.widget.redraw: status_unknown_label
-            # - lambda: |-
-            #     id(inkplate_display).update();
           else:
             - if:
                 condition:
                   lambda: 'return id(alarmo_state) == "disarmed";'
                 then:
                   - lvgl.page.show: disarmed_page
+                  - lvgl.widget.refresh: disarmed_status_label
+                  - lvgl.widget.redraw: disarmed_status_label
                   - lvgl.widget.redraw: arm_away_label
                   - lvgl.widget.redraw: arm_home_label
-                  # - lambda: |-
-                  #     id(inkplate_display).update();
                 else:
+                  # Any non-disarmed state means the last arm request worked.
+                  - lambda: |-
+                      id(arm_error) = false;
                   - lvgl.page.show: armed_page
+                  # refresh re-evaluates the text lambdas; redraw alone keeps the
+                  # text from boot time ("unknown").
+                  - lvgl.widget.refresh: status_left_label
+                  - lvgl.widget.refresh: pin_label
                   - lvgl.widget.redraw: status_left_label
                   - lvgl.widget.redraw: pin_label
-                  # - lambda: |-
-                  #     id(inkplate_display).update();

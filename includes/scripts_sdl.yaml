@@ -1,33 +1,57 @@
 script:
+  # Mock of Alarmo: refuses to arm while the debug "SENSORS: OPEN" toggle is set,
+  # which exercises the CANNOT ARM / ARM FAILED feedback on the disarmed page.
   - id: arm_away_script
+    mode: restart
     then:
       - logger.log: "SDL: ARM AWAY triggered"
       - lambda: |-
-          id(alarmo_state) = "arming";
-          id(local_countdown) = 10;
-      - script.execute: update_ui_visibility
-      - delay: 10s
-      - lambda: |-
-          if (id(alarmo_state) == "arming") {
-            id(alarmo_state) = "armed_away";
-            id(local_countdown) = 0;
-          }
-      - script.execute: update_ui_visibility
+          id(arm_error) = false;
+      - lvgl.widget.refresh: disarmed_status_label
+      - lvgl.widget.redraw: disarmed_status_label
+      - if:
+          condition:
+            lambda: 'return id(open_sensors_list) == "";'
+          then:
+            - lambda: |-
+                id(alarmo_state) = "arming";
+                id(local_countdown) = 10;
+            - script.execute: update_ui_visibility
+            - delay: 10s
+            - lambda: |-
+                if (id(alarmo_state) == "arming") {
+                  id(alarmo_state) = "armed_away";
+                  id(local_countdown) = 0;
+                }
+            - script.execute: update_ui_visibility
+          else:
+            - script.execute: check_arm_result
 
   - id: arm_home_script
+    mode: restart
     then:
       - logger.log: "SDL: ARM HOME triggered"
       - lambda: |-
-          id(alarmo_state) = "arming";
-          id(local_countdown) = 10;
-      - script.execute: update_ui_visibility
-      - delay: 10s
-      - lambda: |-
-          if (id(alarmo_state) == "arming") {
-            id(alarmo_state) = "armed_home";
-            id(local_countdown) = 0;
-          }
-      - script.execute: update_ui_visibility
+          id(arm_error) = false;
+      - lvgl.widget.refresh: disarmed_status_label
+      - lvgl.widget.redraw: disarmed_status_label
+      - if:
+          condition:
+            lambda: 'return id(open_sensors_list) == "";'
+          then:
+            - lambda: |-
+                id(alarmo_state) = "arming";
+                id(local_countdown) = 10;
+            - script.execute: update_ui_visibility
+            - delay: 10s
+            - lambda: |-
+                if (id(alarmo_state) == "arming") {
+                  id(alarmo_state) = "armed_home";
+                  id(local_countdown) = 0;
+                }
+            - script.execute: update_ui_visibility
+          else:
+            - script.execute: check_arm_result
 
   - id: submit_pin_script
     then:
@@ -49,11 +73,13 @@ script:
           condition:
             lambda: 'return id(invalid_flag);'
           then:
+            - lvgl.widget.refresh: pin_label
             - lvgl.widget.redraw: pin_label
             - delay: 2s
             - lambda: |-
                 id(invalid_flag) = false;
                 id(entered_pin) = "";
+            - lvgl.widget.refresh: pin_label
             - lvgl.widget.redraw: pin_label
 
 # interval:

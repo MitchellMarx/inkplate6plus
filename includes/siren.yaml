@@ -1,0 +1,53 @@
+# The siren's relay board, driven straight from the Inkplate's side header (IO13). This replaces the separate
+# ESP8266 "Security Siren Controller", which drove the same relay from its D1 pin (2026-10-31).
+# Wiring: one wire, relay IN to IO13. The relay board has its own power and already shares ground with the panel.
+# IO13 is not a boot strapping pin; IO12 is, and pulled high at boot it can stop the ESP32 from starting.
+switch:
+  - platform: gpio
+    pin: GPIO13
+    name: "Security Siren"
+    id: security_siren
+    icon: "mdi:bullhorn"
+    restore_mode: ALWAYS_OFF  # siren stays off when the panel reboots
+    # No automatic shutoff: it sounds until the alarm stops (Alarmo turns it off on untriggered). The old
+    # controller's 5-minute cutoff was a development feature; removed at his request 2026-10-31.
+    on_turn_on:
+      - logger.log: "SIREN ACTIVATED"
+    # Keep the on-screen siren toggle's ON/OFF in step, whoever switched it.
+    on_state:
+      - lvgl.widget.refresh: siren_toggle_label
+      - lvgl.widget.redraw: siren_toggle_label
+
+# Whether HA's looping speaker siren is playing, so the toggle shows ON (and its tap silences) while only the
+# speakers are sounding.
+binary_sensor:
+  - platform: homeassistant
+    id: speaker_siren_playing
+    entity_id: script.play_siren_everywhere
+    on_state:
+      - lvgl.widget.refresh: siren_toggle_label
+      - lvgl.widget.redraw: siren_toggle_label
+
+# The old controller's timed buttons, carried over
+button:
+  - platform: template
+    name: "Siren Test (10 seconds)"
+    icon: "mdi:bullhorn-outline"
+    on_press:
+      - switch.turn_on: security_siren
+      - delay: 10s
+      - switch.turn_off: security_siren
+  - platform: template
+    name: "Siren Alert (30 seconds)"
+    icon: "mdi:alarm-light"
+    on_press:
+      - switch.turn_on: security_siren
+      - delay: 30s
+      - switch.turn_off: security_siren
+  - platform: template
+    name: "Siren Panic (2 minutes)"
+    icon: "mdi:alarm-bell"
+    on_press:
+      - switch.turn_on: security_siren
+      - delay: 2min
+      - switch.turn_off: security_siren

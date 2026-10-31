@@ -3,7 +3,38 @@ esphome:
   name: sdl
   on_boot:
     - then:
+      # No Home Assistant in the simulator: pretend it is connected and start
+      # disarmed. Use the debug bar to drive the other states.
+      - lambda: |-
+          id(ha_connected_flag) = true;
+          id(alarmo_state) = "disarmed";
       - script.execute: update_ui_visibility
+    # Read the LVGL input device every 10 ms instead of the default (16 ms in
+    # LVGL 9), so a touch state that the SDL touchscreen holds for one 20 ms poll
+    # (see below) is always observed by LVGL.
+    - priority: -100
+      then:
+        - lambda: |-
+            lv_timer_set_period(lv_indev_get_read_timer(lv_indev_get_next(nullptr)), 10);
+        # Must run after LvglComponent::setup has created the buttons.
+        - script.execute: strip_button_pressed_styles
+        - script.execute: update_ui_visibility
+
+# Local override of the stock ESPHome sdl component, see components/sdl/.
+# Measured on the stock component with synthetic clicks every 100 ms:
+#   * 10 ms clicks: ~75% never seen, because the touchscreen only samples the
+#     mouse button level every 50 ms.
+#   * 60 ms clicks: bursts of 3-4 consecutive clicks merged into one press when
+#     the 40 ms gap between clicks fell between two polls.
+#   * mouse motion: only one SDL event is drained per 16 ms main-loop iteration,
+#     so a moving mouse backs up the queue and button events arrive late.
+# The override drains all events per iteration and queues every button
+# transition so the touchscreen consumes exactly one per poll.
+external_components:
+  - source:
+      type: local
+      path: components
+    components: [sdl]
 
 api:
 
@@ -57,6 +88,11 @@ lvgl:
           height: 120
           bg_color: 0x404040
           clickable: false
+          # Keep every debug button fully visible and fixed in place: with the
+          # default padding the content overflowed and the bar scrolled on the
+          # first click, which swallowed that click and moved the buttons.
+          scrollable: false
+          pad_all: 2
           widgets:
             # First row
             - button:
@@ -187,11 +223,16 @@ lvgl:
                 on_click:
                   - lambda: |-
                       if (id(open_sensors_list) == "") {
-                        id(open_sensors_list) = "sensor.door_open";
+                        // Same shape as HA's "Alarmo Open Sensor Names" template sensor.
+                        id(open_sensors_list) = "Back Door, Garage Window";
                       } else {
                         id(open_sensors_list) = "";
                       }
+                      id(arm_error) = false;
+                  - lvgl.widget.refresh: sensors_toggle_label
                   - lvgl.widget.redraw: sensors_toggle_label
+                  - lvgl.widget.refresh: disarmed_status_label
+                  - lvgl.widget.redraw: disarmed_status_label
                 widgets:
                   - label:
                       id: sensors_toggle_label
@@ -214,3 +255,6 @@ touchscreen:
   - platform: sdl
     display: inkplate_display
     id: touch_input
+    # One queued button transition is consumed per poll (see components/sdl),
+    # so this sets the maximum click rate: 20 ms -> 25 clicks/s.
+    update_interval: 20ms

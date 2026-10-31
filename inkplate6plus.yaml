@@ -7,17 +7,55 @@ packages:
   - !include includes/scripts_hardware.yaml
   - !include includes/touchscreen.yaml
   - !include includes/sensors_time.yaml
+  - !include includes/siren.yaml
 
 esphome:
   name: inkplate-alarm-panel
   on_boot:
-    then:
-      - delay: 5s
-      - script.execute: update_ui_visibility
+    - then:
+        - delay: 5s
+        - script.execute: update_ui_visibility
+    # Must run after LvglComponent::setup has created the buttons (default on_boot
+    # priority 600 runs before it).
+    - priority: -100
+      then:
+        - script.execute: strip_button_pressed_styles
+
+globals:
+  - id: display_dirty
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  # millis() of the last LVGL draw; the flush waits for a short quiet period so
+  # the press, release and label redraws of one tap become a single refresh.
+  - id: last_draw_ms
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  # millis() when the display first became dirty (for the stuck-touch fallback).
+  - id: dirty_since_ms
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  # True between touchscreen on_touch and on_release.
+  - id: touch_down
+    type: bool
+    restore_value: no
+    initial_value: 'false'
 
 lvgl:
+  # In greyscale mode every Inkplate refresh is a full ~1 s update that blocks
+  # the main loop (partial updates are only available in 1-bit mode). Instead of
+  # refreshing on every LVGL draw, mark the display dirty here and let the
+  # interval below flush it, so all redraws from one tap collapse into one refresh.
   on_draw_end:
-    component.update: inkplate_display
+    - lambda: |-
+        if (!id(display_dirty)) {
+          id(dirty_since_ms) = millis();
+          ESP_LOGD("display", "DISPLAY: dirty (touch_down=%d)", id(touch_down));
+        }
+        id(display_dirty) = true;
+        id(last_draw_ms) = millis();
   on_resume:
     lambda: |-
       auto call = id(inkplate_light).turn_on();
@@ -26,3 +64,25 @@ lvgl:
     lambda: |-
       auto call = id(inkplate_light).turn_off();
       call.perform();
+
+interval:
+  - interval: 50ms
+    then:
+      - if:
+          condition:
+            # Flush once the finger is up and LVGL has been quiet for 150 ms, so the
+            # press, release and label redraws of one tap become one refresh. If a
+            # release is ever missed, flush anyway after 2 s.
+            lambda: |-
+              if (!id(display_dirty)) return false;
+              uint32_t now = millis();
+              if (now - id(dirty_since_ms) >= 2000) return true;
+              return !id(touch_down) && (now - id(last_draw_ms)) >= 150;
+          then:
+            - globals.set:
+                id: display_dirty
+                value: 'false'
+            - lambda: |-
+                uint32_t t0 = millis();
+                id(inkplate_display).update();
+                ESP_LOGD("display", "DISPLAY: refresh took %u ms", (unsigned) (millis() - t0));

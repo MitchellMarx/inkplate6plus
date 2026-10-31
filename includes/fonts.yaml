@@ -1,11 +1,13 @@
+# Bold cuts: in 1-bit mode the anti-aliased edge pixels render white, which
+# thins every stroke by about a pixel on each side.
 font:
-  - file: "gfonts://Montserrat"
+  - file: "gfonts://Montserrat@700"
     id: montserrat_18
     size: 18
-  - file: "gfonts://Montserrat"
+  - file: "gfonts://Montserrat@700"
     id: montserrat_35
     size: 35
-  - file: "gfonts://Montserrat"
+  - file: "gfonts://Montserrat@700"
     id: montserrat_43
     size: 43
   - file: "gfonts://Roboto"

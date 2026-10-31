@@ -1,5 +1,24 @@
 id: disarmed_page
 widgets:
+  # Why the last arm attempt failed. Empty when there is nothing to report.
+  - label:
+      id: disarmed_status_label
+      x: 25
+      y: 70
+      width: 974
+      height: 160
+      text_align: CENTER
+      text_font: montserrat_35
+      long_mode: WRAP
+      text: !lambda |-
+        // open_sensors_list holds the friendly names, comma separated (see
+        // scripts_hardware.yaml), or "" when nothing blocked the last arm.
+        if (!id(open_sensors_list).empty())
+          return std::string("CANNOT ARM, OPEN: ") + id(open_sensors_list);
+        if (id(arm_error))
+          return std::string("ARM REQUEST FAILED\nCHECK HOME ASSISTANT / ALARMO");
+        return std::string("");
+
   - button:
       id: arm_away_btn
       x: 51

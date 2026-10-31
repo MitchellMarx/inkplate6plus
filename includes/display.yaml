@@ -15,8 +15,14 @@ light:
 display:
   - platform: inkplate
     id: inkplate_display
-    greyscale: true
-    partial_updating: true
+    # 1-bit mode: the driver only supports partial (no-flash) updates in 1-bit
+    # mode; in greyscale every update was a full ~2.5 s flashing refresh.
+    # Anything that is not pure black renders white, so the UI is styled
+    # black-on-white (see ui_common.yaml).
+    greyscale: false
+    # Full (flashing) refresh on every update: partial updates left ghosting he didn't like (2026-10-31),
+    # so he chose clean full wipes even though they're slower.
+    partial_updating: false
     update_interval: never
     model: inkplate_6_plus
     

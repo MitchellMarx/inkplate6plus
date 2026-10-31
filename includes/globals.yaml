@@ -29,12 +29,30 @@ globals:
   #   restore_value: no
   #   initial_value: '0'
 
+  # Starts as "unknown" on purpose: the panel shows CONNECTING... until Home
+  # Assistant actually pushes an alarm state. Starting as "disarmed" made a
+  # panel with no Home Assistant connection look like a working disarmed panel.
   - id: alarmo_state
     type: std::string
     restore_value: no
-    initial_value: '"disarmed"'
+    initial_value: '"unknown"'
 
+  # Friendly names of the sensors that blocked the last arm attempt, comma
+  # separated, from Home Assistant's "Alarmo Open Sensor Names" template sensor.
+  # Empty when nothing is blocking.
   - id: open_sensors_list
     type: std::string
     restore_value: no
     initial_value: '""'
+
+  # True while the Home Assistant API client is connected to this panel.
+  - id: ha_connected_flag
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+  # Set when an arm request produced no state change within a few seconds.
+  - id: arm_error
+    type: bool
+    restore_value: no
+    initial_value: 'false'

@@ -10,15 +10,14 @@ widgets:
       text_font: montserrat_43
       text: !lambda |-
         std::string s = id(alarmo_state);
-        if (s == "arming") {
-          char buf[64];
-          sprintf(buf, "ARMING (%ds)", id(local_countdown));
-          return std::string(buf);
-        }
-        if (s == "pending") {
-          char buf[64];
-          sprintf(buf, "PENDING (%ds)", id(local_countdown));
-          return std::string(buf);
+        if (s == "arming" || s == "pending") {
+          std::string label = (s == "arming") ? "ARMING" : "PENDING";
+          if (id(local_countdown) > 0) {
+            char buf[64];
+            sprintf(buf, "%s (%ds)", label.c_str(), id(local_countdown));
+            return std::string(buf);
+          }
+          return label + "...";
         }
         if (s == "triggered")
           return std::string("TRIGGERED!");
@@ -41,7 +40,7 @@ widgets:
       width: 657
       height: 71
       text_align: CENTER
-      text_font: montserrat_35
+      text_font: montserrat_43
       text: !lambda |-
         if (id(invalid_flag)) return std::string("INVALID");
         std::string s = "";
@@ -364,6 +363,6 @@ widgets:
             height: 152
             align: CENTER
             text: 'OK'
-            text_font: montserrat_34
+            text_font: montserrat_43
             text_align: CENTER
             pad_top: 53
